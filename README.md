@@ -35,8 +35,8 @@ This project demonstrates custom extensions created for the [Tiptap Editor](http
 
   1. Clone this repository:
      ```bash
-      git clone https://github.com/your-username/tiptap-custom-extensions.git
-     cd tiptap-custom-extensions
+     git clone https://github.com/gitsofakshay/myTiptapExtension
+
   2. Install dependencies:
      ```bash
      npm create vite@latest tiptap-extension -- --template react
