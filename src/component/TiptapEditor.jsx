@@ -1,7 +1,8 @@
-import React,{ useState } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import { EmojiExtension, ClearCopyExtension } from './MyExtension'
+import React, { useState } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { EmojiExtension, ClearCopyExtension, ImportExtension, ExportExtension } from './MyExtension';
+import ImportExportButton from './ImportExportButton';
 
 export default function TiptapEditor() {
   const [copyStatus, setCopyStatus] = useState(false); // State for copy button status
@@ -46,14 +47,44 @@ export default function TiptapEditor() {
         setTimeout(() => setCopyStatus(false), 2000); // Reset after 2 seconds
       },
     }),
-  ]
+    ImportExtension, // Custom extension to import files
+    ExportExtension, // Custom extension to export files
+  ];
 
-  const content = `<p>Type ":smile:" or press Mod-Shift-E for 😄</p>`
-  const editor = useEditor({ extensions, content })
+  const content = `<p>Type ":smile:" or press Mod-Shift-E for 😄</p>`;
+  const editor = useEditor({ extensions, content });
 
   if (!editor) {
-    return null
+    return null;
   }
+
+  // Handling import
+  const handleImport = (type) => {
+    if (type === 'txt') {
+      editor.commands.importFile('txt'); // Import .txt files
+    } else if (type === 'html') {
+      editor.commands.importFile('html'); // Import .html files
+    } else if (type === 'pdf') {
+      editor.commands.importFile('pdf'); // Import .pdf files
+    } else if (type === 'docx') {
+      editor.commands.importFile('docx'); // Import .docx files
+    }
+  };
+
+  // Handling export
+  const handleExport = (type) => {
+    if (type === 'txt') {
+      editor.commands.exportFile('txt'); // Export .txt files
+    } else if (type === 'html') {
+      editor.commands.exportFile('html'); // Export .html files
+    } else if (type === 'pdf') {
+      editor.commands.exportFile('pdf'); // Export .pdf files
+    } else if (type === 'docx') {
+      editor.commands.exportFile('docx'); // Export .docx files
+    } else if (type === 'email') {
+      editor.commands.exportFile('email'); // Export as email
+    }
+  };
 
   return (
     <div className="w-full">
@@ -68,30 +99,37 @@ export default function TiptapEditor() {
           </button>
         ))}
       </div>
-      <div className="flex space-x-2 mb-4">
-      {/* Clear Button */}
-      <button
-        onClick={() => editor.commands.clearContent()}
-        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-      >
-        Clear
-      </button>
-      {/* Copy Button */}
-      <button
-        onClick={() => editor.commands.copyContent()}
-        className={`px-4 py-2 rounded ${
-          copyStatus
-            ? 'bg-green-500 text-white hover:bg-green-600'
-            : 'bg-blue-500 text-white hover:bg-blue-600'
-        }`}
-      >
-        {copyStatus ? 'Copied!' : 'Copy'}
-      </button>
-    </div>
+      <div className="flex justify-between items-center space-x-4 mb-4">
+        {/* Import and Export Buttons */}
+        <div className="flex space-x-2">
+          <ImportExportButton onImport={handleImport} onExport={handleExport} />
+        </div>
+
+        <div className="flex space-x-2">
+          {/* Clear Button */}
+          <button
+            onClick={() => editor.commands.clearContent()}
+            className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 focus:ring-2 focus:ring-red-300"
+          >
+            Clear
+          </button>
+
+          {/* Copy Button */}
+          <button
+            onClick={() => editor.commands.copyContent()}
+            className={`px-6 py-2 rounded-lg focus:ring-2 ${copyStatus
+                ? 'bg-green-500 text-white hover:bg-green-600 focus:ring-green-300'
+                : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-300'
+              }`}
+          >
+            {copyStatus ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+      </div>
+
       <div className="prose prose-lg max-w-none p-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
         <EditorContent editor={editor} />
       </div>
     </div>
-  )
+  );
 }
-
