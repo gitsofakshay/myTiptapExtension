@@ -288,16 +288,8 @@ export const ExportExtension = Extension.create({
               console.error('Error exporting file:', error);
             }
           } else if (type === 'email') {
-            const subject = "Exported Content";
-            const formattedContent = `
-              <html>
-                <body>
-                  ${content} <!-- Assumes 'content' contains valid HTML -->
-                </body>
-              </html>
-            `;
-            console.log(formattedContent);
-            const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(formattedContent)}`;
+            const subject = "Exported Content";                        
+            const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(textContent)}`;
 
             // Prompt to open in the user's email client
             window.location.href = mailtoLink;            
