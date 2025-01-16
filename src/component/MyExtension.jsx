@@ -153,7 +153,7 @@ export const ImportExtension = Extension.create({
 
                       for (const item of sortedItems) {
                         const y = item.transform[5];
-                        if (Math.abs(currentY - y) > 2) { 
+                        if (Math.abs(currentY - y) > 2) {
                           lines.push(currentLine);
                           currentLine = [];
                           currentY = y;
@@ -165,7 +165,7 @@ export const ImportExtension = Extension.create({
                       // Construct Tiptap-compatible paragraphs
                       for (const line of lines) {
                         const lineText = line
-                          .sort((a, b) => a.transform[4] - b.transform[4]) 
+                          .sort((a, b) => a.transform[4] - b.transform[4])
                           .map((item) => item.str)
                           .join('');
 
@@ -275,7 +275,7 @@ export const ExportExtension = Extension.create({
               const doc = new Document({
                 sections: [
                   {
-                    children: paragraphs, 
+                    children: paragraphs,
                   },
                 ],
               });
@@ -286,10 +286,24 @@ export const ExportExtension = Extension.create({
               });
             } catch (error) {
               console.error('Error exporting file:', error);
-            }            
+            }
           } else if (type === 'email') {
-            const mailtoLink = `mailto:?subject=Exported Content&body=${encodeURIComponent(content)}`;
+            const subject = "Exported Content";
+            const formattedContent = `
+              <html>
+                <body>
+                  ${content} <!-- Assumes 'content' contains valid HTML -->
+                </body>
+              </html>
+            `;
+
+            const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('HTML email drafts are not supported directly via mailto.')}`;
+            // const emailDraft = `data:text/html;charset=utf-8,${encodeURIComponent(formattedContent)}`;
+
+            // Prompt to open in the user's email client
             window.location.href = mailtoLink;
+            // const mailtoLink = `mailto:?subject=Exported Content&body=${encodeURIComponent(content)}`;
+            // window.location.href = mailtoLink;
           }
         } catch (error) {
           console.error('Error exporting file:', error);

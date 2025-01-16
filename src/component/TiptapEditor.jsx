@@ -99,7 +99,7 @@ export default function TiptapEditor() {
           </button>
         ))}
       </div>
-      <div className="flex justify-between items-center space-x-4 mb-4">
+      <div className="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0 md:space-x-4 mb-4">
         {/* Import and Export Buttons */}
         <div className="flex space-x-2">
           <ImportExportButton onImport={handleImport} onExport={handleExport} />
