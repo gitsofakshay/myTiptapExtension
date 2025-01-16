@@ -296,14 +296,11 @@ export const ExportExtension = Extension.create({
                 </body>
               </html>
             `;
-
-            const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('HTML email drafts are not supported directly via mailto.')}`;
-            // const emailDraft = `data:text/html;charset=utf-8,${encodeURIComponent(formattedContent)}`;
+            console.log(formattedContent);
+            const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(formattedContent)}`;
 
             // Prompt to open in the user's email client
-            window.location.href = mailtoLink;
-            // const mailtoLink = `mailto:?subject=Exported Content&body=${encodeURIComponent(content)}`;
-            // window.location.href = mailtoLink;
+            window.location.href = mailtoLink;            
           }
         } catch (error) {
           console.error('Error exporting file:', error);
