@@ -1,11 +1,15 @@
 import { Extension } from '@tiptap/core';
 import { jsPDF } from 'jspdf';
-import { Document, Packer, Paragraph } from 'docx';
-import { getDocument } from 'pdfjs-dist';
-import * as pdfjsLib from 'pdfjs-dist';
+import html2canvas from 'html2canvas';
+import html2pdf from 'html2pdf.js';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import mammoth from 'mammoth';
 
-//Extension to add emojis to the editor
+// Set the workerSrc for pdfjs-dist to use the local worker file
+GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+// Extension to add emojis to the editor
 export const EmojiExtension = Extension.create({
   name: 'emoji',
 
@@ -63,8 +67,7 @@ export const EmojiExtension = Extension.create({
   },
 });
 
-
-//Extension to clear and copy content
+// Extension to clear and copy content
 export const ClearCopyExtension = Extension.create({
   name: 'clearCopy',
 
@@ -81,7 +84,7 @@ export const ClearCopyExtension = Extension.create({
         if (navigator.clipboard) {
           navigator.clipboard.writeText(text).then(() => {
             if (this.options.onCopy) {
-              this.options.onCopy(); // Call the callback on successful copy
+              this.options.onCopy();
             }
           });
         } else {
@@ -92,7 +95,6 @@ export const ClearCopyExtension = Extension.create({
     };
   },
 });
-
 
 // Extension to import content
 export const ImportExtension = Extension.create({
@@ -117,57 +119,85 @@ export const ImportExtension = Extension.create({
               if (file) {
                 let content = '';
                 try {
-                  if (fileType === 'pdf') {
-                    // Set the workerSrc to the path of the worker script
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
-
-                    // Use pdfjs-dist to extract text from the PDF
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await getDocument(arrayBuffer).promise;
-
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                      const page = await pdf.getPage(i);
-                      const textContent = await page.getTextContent();
-                      content += textContent.items.map((item) => item.str).join(' ') + '\n';
-                    }
-                  } else if (fileType === 'docx') {
-                    // Extract text from .docx file using mammoth
-                    const arrayBuffer = await file.arrayBuffer();
-                    const result = await mammoth.extractRawText({ arrayBuffer });
-                    content = result.value; // Extracted plain text content
+                  if (fileType === 'txt') {
+                    content = await file.text();
                   } else if (fileType === 'html') {
-                    // Handle HTML import
                     content = await file.text();
-                    // Parse HTML to text
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(content, 'text/html');
-                    content = doc.body.textContent || '';
-                  } else if (fileType === 'txt') {
-                    // Handle TXT import
-                    content = await file.text();
+                  } else if (fileType === 'pdf') {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await getDocument({ data: arrayBuffer }).promise;
+                    const numPages = pdf.numPages;
+
+                    // Prepare Tiptap-compatible content
+                    let editorContent = {
+                      type: "doc",
+                      content: []
+                    };
+
+                    for (let i = 1; i <= numPages; i++) {
+                      const page = await pdf.getPage(i);
+                      const text = await page.getTextContent();
+
+                      // Sort text items by vertical position (y-coordinate)
+                      const sortedItems = text.items.sort((a, b) => {
+                        if (a.transform[5] !== b.transform[5]) {
+                          return b.transform[5] - a.transform[5];
+                        }
+                        return a.transform[4] - b.transform[4];
+                      });
+
+                      // Group items by lines based on y-coordinates
+                      let lines = [];
+                      let currentLine = [];
+                      let currentY = sortedItems[0]?.transform[5] || 0;
+
+                      for (const item of sortedItems) {
+                        const y = item.transform[5];
+                        if (Math.abs(currentY - y) > 2) { 
+                          lines.push(currentLine);
+                          currentLine = [];
+                          currentY = y;
+                        }
+                        currentLine.push(item);
+                      }
+                      lines.push(currentLine);
+
+                      // Construct Tiptap-compatible paragraphs
+                      for (const line of lines) {
+                        const lineText = line
+                          .sort((a, b) => a.transform[4] - b.transform[4]) 
+                          .map((item) => item.str)
+                          .join('');
+
+                        if (lineText.trim()) {
+                          editorContent.content.push({
+                            type: "paragraph",
+                            content: [
+                              {
+                                type: "text",
+                                text: lineText
+                              }
+                            ]
+                          });
+                        }
+                      }
+
+                      if (i < numPages) {
+                        editorContent.content.push({
+                          type: "horizontalRule"
+                        });
+                      }
+                    }
+
+                    content = editorContent
+                  } else if (fileType === 'docx') {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.convertToHtml({ arrayBuffer });
+                    content = result.value;
                   }
-
-                  // Transform raw content into a format compatible with Tiptap's schema
-                  const formattedContent = {
-                    type: 'doc',
-                    content: [
-                      {
-                        type: 'paragraph',
-                        content: [
-                          {
-                            type: 'text',
-                            text: content,
-                          },
-                        ],
-                      },
-                    ],
-                  };
-
-                  // Insert content into the editor
-                  editor.commands.setContent(formattedContent);
+                  editor.commands.setContent(content);
                 } catch (error) {
-                  console.error(`Error importing ${fileType} file:`, error);
-                  alert(`Failed to import ${fileType} file. Please try again.`);
+                  console.error('Error importing file:', error);
                 }
               }
             };
@@ -178,8 +208,7 @@ export const ImportExtension = Extension.create({
   },
 });
 
-
-// function to download exported file
+// Function to download exported file
 function downloadFile(blob, filename) {
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -194,10 +223,10 @@ export const ExportExtension = Extension.create({
 
   addCommands() {
     return {
-      exportFile: (type) => () => {
+      exportFile: (type) => ({ editor }) => {
         try {
-          const content = this.editor.getHTML(); // Get editor content as HTML
-          const textContent = this.editor.getText(); // Get editor content as plain text
+          const content = editor.getHTML();
+          const textContent = editor.getText();
 
           if (type === 'txt') {
             const blob = new Blob([textContent], { type: 'text/plain' });
@@ -206,44 +235,60 @@ export const ExportExtension = Extension.create({
             const blob = new Blob([content], { type: 'text/html' });
             downloadFile(blob, 'content.html');
           } else if (type === 'pdf') {
-            const pdf = new jsPDF();
-            const pageWidth = pdf.internal.pageSize.getWidth() - 20; // Page width minus margins
-            const pageHeight = pdf.internal.pageSize.getHeight() - 20; // Page height minus margins
-            const margin = 10; // Margin for the content
-            const lineHeight = 4; // Line height for text
-            const fontSize = 12; // Font size for content
-            let cursorY = margin; // Starting position for text
+            const options = {
+              margin: 25,
+              filename: 'content.pdf',
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: {
+                scale: 2,
+                useCORS: true,
+              },
+              jsPDF: {
+                unit: 'pt',
+                format: 'a4',
+                orientation: 'portrait',
+              },
+            };
 
-            pdf.setFontSize(fontSize);
-
-            // Split text into lines that fit within the page width
-            const lines = pdf.splitTextToSize(textContent, pageWidth);
-
-            // Loop through lines and add to PDF, handling page breaks
-            lines.forEach((line) => {
-              if (cursorY + lineHeight > pageHeight) {
-                pdf.addPage(); // Add a new page when content exceeds page height
-                cursorY = margin; // Reset cursor to top margin
-              }
-              pdf.text(line, margin, cursorY);
-              cursorY += lineHeight; // Move cursor down for next line
-            });
-
-            pdf.save('content.pdf');
+            // Generate the PDF from the HTML content
+            html2pdf().set(options).from(content).save();
           } else if (type === 'docx') {
-            const doc = new Document({
-              sections: [
-                {
-                  children: [new Paragraph(textContent)],
-                },
-              ],
-            });
-            Packer.toBlob(doc).then((blob) => {
-              downloadFile(blob, 'content.docx');
-            });
+            try {
+              // Parse the HTML content
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(content, 'text/html');
+
+              const paragraphs = Array.from(htmlDoc.body.childNodes).map((node) => {
+                // Handle text styling (bold, italic)
+                const textRun = new TextRun({
+                  text: node.textContent || '',
+                  bold: node.nodeName === 'B' || node.style?.fontWeight === 'bold',
+                  italics: node.nodeName === 'I' || node.style?.fontStyle === 'italic',
+                });
+
+                return new Paragraph({
+                  children: [textRun],
+                });
+              });
+
+              // Create a new Document and add sections
+              const doc = new Document({
+                sections: [
+                  {
+                    children: paragraphs, 
+                  },
+                ],
+              });
+
+              // Export the document as a Blob and download
+              Packer.toBlob(doc).then((blob) => {
+                downloadFile(blob, 'content.docx');
+              });
+            } catch (error) {
+              console.error('Error exporting file:', error);
+            }            
           } else if (type === 'email') {
-            const emailContent = encodeURIComponent(textContent);
-            const mailtoLink = `mailto:?subject=Exported Content&body=${emailContent}`;
+            const mailtoLink = `mailto:?subject=Exported Content&body=${encodeURIComponent(content)}`;
             window.location.href = mailtoLink;
           }
         } catch (error) {

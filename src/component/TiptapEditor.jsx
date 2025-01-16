@@ -127,7 +127,7 @@ export default function TiptapEditor() {
         </div>
       </div>
 
-      <div className="prose prose-lg max-w-none p-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+      <div id="your-content-id" className="prose prose-lg max-w-none p-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
         <EditorContent editor={editor} />
       </div>
     </div>
