@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { EmojiExtension, ClearCopyExtension, ImportExtension, ExportExtension } from './MyExtension';
+import { EmojiExtension, ClearCopyExtension, ImportExtension, ExportExtension, ImportRandomTextExtension } from './MyExtension';
 import ImportExportButton from './ImportExportButton';
 
 export default function TiptapEditor() {
   const [copyStatus, setCopyStatus] = useState(false); // State for copy button status
+  const [isLoading, setIsLoading] = useState(false)
 
   const emojis = [
     { name: 'smile', icon: '😄' },
@@ -49,6 +50,7 @@ export default function TiptapEditor() {
     }),
     ImportExtension, // Custom extension to import files
     ExportExtension, // Custom extension to export files
+    ImportRandomTextExtension, // Custom extension to insert random text
   ];
 
   const content = `<p>Type ":smile:" or press Mod-Shift-E for 😄</p>`;
@@ -104,8 +106,47 @@ export default function TiptapEditor() {
         <div className="flex space-x-2">
           <ImportExportButton onImport={handleImport} onExport={handleExport} />
         </div>
-
         <div className="flex space-x-2">
+          {/* Insert Random Text Button */}
+          <button
+            onClick={() => {
+              editor.commands.getRandomText(setIsLoading)
+            }}
+            className={`px-6 py-2 text-white rounded-lg focus:ring-2 focus:ring-black-300 ${isLoading
+              ? 'bg-gray-500 cursor-not-allowed' // Disabled button style
+              : 'bg-green-500 hover:bg-green-600'
+              }`}
+            disabled={isLoading} // Disable the button while loading
+          >
+            {isLoading ? (
+              <div className="flex items-center space-x-2">
+                <svg
+                  className="w-5 h-5 animate-spin text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 100 8v4a8 8 0 01-8-8z"
+                  ></path>
+                </svg>
+                <span>Loading...</span>
+              </div>
+            ) : (
+              'Get Random Text'
+            )}
+          </button>
+
           {/* Clear Button */}
           <button
             onClick={() => editor.commands.clearContent()}
@@ -118,8 +159,8 @@ export default function TiptapEditor() {
           <button
             onClick={() => editor.commands.copyContent()}
             className={`px-6 py-2 rounded-lg focus:ring-2 ${copyStatus
-                ? 'bg-green-500 text-white hover:bg-green-600 focus:ring-green-300'
-                : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-300'
+              ? 'bg-green-500 text-white hover:bg-green-600 focus:ring-green-300'
+              : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-300'
               }`}
           >
             {copyStatus ? 'Copied!' : 'Copy'}

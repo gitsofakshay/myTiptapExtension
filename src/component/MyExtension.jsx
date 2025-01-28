@@ -8,6 +8,7 @@ import mammoth from 'mammoth';
 
 // Set the workerSrc for pdfjs-dist to use the local worker file
 GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 // Extension to add emojis to the editor
 export const EmojiExtension = Extension.create({
@@ -95,6 +96,51 @@ export const ClearCopyExtension = Extension.create({
     };
   },
 });
+
+// Extension to import random text
+export const ImportRandomTextExtension = Extension.create({
+  name: 'getRandomText',
+
+  addCommands() {
+    return {
+      getRandomText: (setLoading) => ({ editor }) => {
+        // Start the loading state
+        if (setLoading) setLoading(true);
+
+        // Make the GET request to the API to fetch random text
+        fetch('https://randommer.io/api/Text/LoremIpsum?loremType=business&type=paragraphs&number=1', {
+          method: 'GET',
+          headers: {
+            accept: '*/*',
+            'X-Api-Key': API_KEY,
+          },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            // Insert the fetched text into the editor
+            if (data && data.length > 0) {
+              editor.commands.insertContent(data);
+            } else {
+              console.error('No data received from API');
+            }
+          })
+          .catch((error) => {
+            console.error('Error fetching random text:', error);
+          })
+          .finally(() => {
+            // End the loading state
+            if (setLoading) setLoading(false);
+          });
+      },
+    };
+  },
+});
+
 
 // Extension to import content
 export const ImportExtension = Extension.create({
@@ -302,4 +348,4 @@ export const ExportExtension = Extension.create({
   },
 });
 
-export default { EmojiExtension, ClearCopyExtension, ImportExtension, ExportExtension };
+export default { EmojiExtension, ClearCopyExtension, ImportExtension, ExportExtension , ImportRandomTextExtension};
